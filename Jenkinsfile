@@ -50,13 +50,16 @@ void runUnitTests() {
 
 void runInstrumentedTests() {
     stage('Instrumented Tests') {
+        sh './gradlew assembleDebugAndroidTest'
         parallel(
                 emu1: {
                     runInstrumentedTestOnEmu("-Pandroid.testInstrumentationRunnerArguments.class=com.google.samples.apps.topeka.activity.SignInActivityTest -Pdevices=emulator-$PORT_EMU_1")
                 },
                 emu2: {
                     runInstrumentedTestOnEmu("-Pandroid.testInstrumentationRunnerArguments.class=com.google.samples.apps.topeka.activity.CategorySelectionActivityTest -Pdevices=emulator-$PORT_EMU_2")
-                })
+                },
+                failFast: true
+        )
         Throwable error = publishInstrumentedTestReport()
         if (error != null) {
             sendEmailFail()
@@ -103,6 +106,8 @@ void sendEmailSuccess() {
 }
 
 void sendEmailFail() {
-    currentBuild.result = 'FAILURE'
-    step([$class: 'Mailer', notifyEveryUnstableBuild: true, recipients: EMAIL, sendToIndividuals: true])
+    if(currentBuild.result != 'FAILURE') {
+        currentBuild.result = 'FAILURE'
+        step([$class: 'Mailer', notifyEveryUnstableBuild: true, recipients: EMAIL, sendToIndividuals: true])
+    }
 }
